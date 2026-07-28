@@ -49,5 +49,5 @@ echo   that's a false positive from the behavior pattern, not a
 echo   virus, but you may need to click "More info -^> Run anyway"
 echo   or add an exclusion.
 echo ===============================================
-pause.
+pause
 
