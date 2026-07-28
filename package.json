@@ -18,6 +18,7 @@
   "build": {
     "appId": "com.test.zentaskpro",
     "productName": "ZenTask",
+    "artifactName": "ZenTask.${ext}",
     "win": {
       "target": "portable",
       "icon": "icon.ico"
