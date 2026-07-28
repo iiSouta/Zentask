@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; user-select: none; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: rgba(0,0,0,0.35); cursor: crosshair; }
+
+  #box {
+    position: absolute;
+    border: 2px solid #ef4444;
+    background: rgba(239, 68, 68, 0.12);
+    display: none;
+  }
+  #handle {
+    position: absolute; right: -7px; bottom: -7px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #ef4444; border: 2px solid white; cursor: nwse-resize;
+  }
+  #controls {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+    background: #131522; border: 1px solid rgba(255,255,255,0.1);
+    padding: 12px 18px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    color: #fff; font-size: 13px; font-weight: 600;
+  }
+  #readout { font-family: monospace; color: #949bc0; min-width: 190px; }
+  button {
+    border: none; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  #confirm { background: #5a57f5; color: white; }
+  #cancel { background: rgba(255,255,255,0.08); color: #ccc; }
+
+  #banner {
+    position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
+    background: #131522; border: 1px solid rgba(255,255,255,0.1);
+    padding: 10px 20px; border-radius: 12px; color: #fff; font-size: 13px; font-weight: 600;
+  }
+  #crosshair-v, #crosshair-h { position: fixed; background: rgba(90,87,245,0.6); pointer-events: none; }
+  #crosshair-v { width: 1px; height: 100vh; top: 0; }
+  #crosshair-h { height: 1px; width: 100vw; left: 0; }
+</style>
+</head>
+<body>
+
+  <!-- BOX MODE -->
+  <div id="box"><div id="handle"></div></div>
+  <div id="controls" style="display:none;">
+    <span id="readout">X: 0 | Y: 0 | W: 0 | H: 0</span>
+    <button id="confirm">Confirm Selection</button>
+    <button id="cancel">Cancel (Esc)</button>
+  </div>
+
+  <!-- POINT MODE -->
+  <div id="banner" style="display:none;">🎯 Click anywhere to capture coordinates (Esc to cancel)</div>
+  <div id="crosshair-v" style="display:none;"></div>
+  <div id="crosshair-h" style="display:none;"></div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const mode = params.get('mode') || 'box';
+
+  function cancel() {
+    window.zentask.overlaySendCancel();
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') cancel();
+  });
+
+  if (mode === 'point') {
+    const banner = document.getElementById('banner');
+    const cv = document.getElementById('crosshair-v');
+    const ch = document.getElementById('crosshair-h');
+    banner.style.display = 'block';
+    cv.style.display = 'block';
+    ch.style.display = 'block';
+
+    window.addEventListener('mousemove', (e) => {
+      cv.style.left = e.clientX + 'px';
+      ch.style.top = e.clientY + 'px';
+    });
+
+    window.addEventListener('click', (e) => {
+      window.zentask.overlaySendResult({ x: Math.round(e.screenX), y: Math.round(e.screenY) });
+    });
+
+  } else {
+    const box = document.getElementById('box');
+    const handle = document.getElementById('handle');
+    const controls = document.getElementById('controls');
+    const readout = document.getElementById('readout');
+    const confirmBtn = document.getElementById('confirm');
+    const cancelBtn = document.getElementById('cancel');
+
+    let startX = 0, startY = 0, drawing = false, ready = false;
+    let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
+    let resizing = false;
+
+    function updateReadout() {
+      readout.innerText = `X: ${Math.round(boxX)} | Y: ${Math.round(boxY)} | W: ${Math.round(boxW)} | H: ${Math.round(boxH)}`;
+    }
+    function paintBox() {
+      box.style.left = boxX + 'px';
+      box.style.top = boxY + 'px';
+      box.style.width = boxW + 'px';
+      box.style.height = boxH + 'px';
+      updateReadout();
+    }
+
+    // default starter box, centered-ish
+    boxX = window.innerWidth / 2 - 150;
+    boxY = window.innerHeight / 2 - 100;
+    boxW = 300; boxH = 200;
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.target === handle || e.target === confirmBtn || e.target === cancelBtn) return;
+      drawing = true;
+      ready = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      boxX = startX; boxY = startY; boxW = 0; boxH = 0;
+      box.style.display = 'block';
+      controls.style.display = 'flex';
+      paintBox();
+    });
+
+    handle.addEventListener('mousedown', (e) => {
+      resizing = true;
+      e.stopPropagation();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (drawing) {
+        boxX = Math.min(startX, e.clientX);
+        boxY = Math.min(startY, e.clientY);
+        boxW = Math.abs(e.clientX - startX);
+        boxH = Math.abs(e.clientY - startY);
+        paintBox();
+      } else if (resizing) {
+        boxW = Math.max(20, e.clientX - boxX);
+        boxH = Math.max(20, e.clientY - boxY);
+        paintBox();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      drawing = false;
+      resizing = false;
+    });
+
+    confirmBtn.addEventListener('click', () => {
+      if (!ready) return;
+      window.zentask.overlaySendResult({
+        x: Math.round(boxX), y: Math.round(boxY),
+        w: Math.round(boxW), h: Math.round(boxH)
+      });
+    });
+    cancelBtn.addEventListener('click', cancel);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenTask</title>
+    <style>
+        :root {
+            --bg-main: #131522;
+            --bg-card: #131522;
+            --bg-input: #10121d;
+            --bg-button: rgba(255, 255, 255, 0.03);
+            --bg-button-hover: rgba(255, 255, 255, 0.07);
+            --border-color: rgba(255, 255, 255, 0.07);
+            
+            --text-title: #ffffff;
+            --text-muted: #6b728e;
+            --icon-color: #949bc0;
+            
+            --accent-purple: #5a57f5;
+            --accent-glow: rgba(90, 87, 245, 0.3);
+            
+            --win-yellow: #d99b26;
+            --win-red: #d14d5f;
+            
+            --state-rec: #ef4444;
+            --state-play: #10b981;
+            --state-clicker: #8b5cf6;
+        }
+
+        body.light-mode {
+            --bg-main: #f0f2f5;
+            --bg-card: #ffffff;
+            --bg-input: #e4e7ed;
+            --bg-button: rgba(0, 0, 0, 0.03);
+            --bg-button-hover: rgba(0, 0, 0, 0.07);
+            --border-color: rgba(0, 0, 0, 0.08);
+            
+            --text-title: #111827;
+            --text-muted: #6b7280;
+            --icon-color: #4b5563;
+            
+            --win-yellow: #d99b26;
+            --win-red: #d14d5f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        /* Transparent window background for desktop overlay behavior */
+        html, body {
+            background: transparent !important;
+            color: var(--text-title);
+            overflow: hidden;
+        }
+
+        .widget-container {
+            width: 100%;
+            min-width: 560px;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            max-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 22px;
+            border-bottom: 1px solid var(--border-color);
+            -webkit-app-region: drag; /* Makes the frameless window draggable from the header */
+        }
+
+        .brand-area, .window-controls {
+            -webkit-app-region: no-drag; /* Keeps buttons and logo interactive */
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .window-controls { display: flex; gap: 8px; }
+
+        .logo-circle {
+            width: 28px;
+            height: 28px;
+            background-color: var(--accent-purple);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 12px var(--accent-glow);
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .logo-circle svg { width: 14px; height: 14px; stroke: #ffffff; stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .title { font-weight: 700; font-size: 15px; letter-spacing: 0.4px; }
+
+        .win-circle {
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            border: 2px solid;
+            cursor: pointer;
+            background: transparent;
+            transition: 0.2s;
+        }
+        .win-circle.yellow { border-color: var(--win-yellow); }
+        .win-circle.red { border-color: var(--win-red); }
+        .win-circle:hover { background-color: currentColor; }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px 20px;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            flex: 1;
+            aspect-ratio: 1 / 1;
+            background-color: var(--bg-button);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn:hover { background-color: var(--bg-button-hover); border-color: rgba(255, 255, 255, 0.15); }
+        .tool-btn:active { transform: scale(0.96); }
+
+        .tool-btn svg { stroke: var(--icon-color); width: 20px; height: 20px; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .tool-btn span { color: var(--text-muted); font-size: 9px; font-weight: 700; letter-spacing: 0.8px; }
+
+        .tool-btn.is-recording { border-color: var(--state-rec); background-color: rgba(239, 68, 68, 0.08); }
+        .tool-btn.is-recording svg { stroke: var(--state-rec); }
+        .tool-btn.is-recording span { color: var(--state-rec); }
+
+        .tool-btn.is-playing { border-color: var(--state-play); background-color: rgba(16, 185, 129, 0.08); }
+        .tool-btn.is-playing svg { stroke: var(--state-play); }
+        .tool-btn.is-playing span { color: var(--state-play); }
+
+        .tool-btn.is-clicker-active { border-color: var(--state-clicker); background-color: rgba(139, 92, 246, 0.08); }
+        .tool-btn.is-clicker-active svg { stroke: var(--state-clicker); }
+        .tool-btn.is-clicker-active span { color: var(--state-clicker); }
+
+        .tool-btn.active-tool { border-color: var(--accent-purple); background: rgba(90, 87, 245, 0.1); }
+        .tool-btn.active-tool svg { stroke: var(--accent-purple); }
+        .tool-btn.active-tool span { color: var(--accent-purple); }
+
+        .tabs-row {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 20px;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 14px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        .tab:hover { color: var(--icon-color); background: var(--bg-button-hover); }
+        .tab.active { color: var(--text-title); background: var(--bg-button-hover); box-shadow: inset 0 -2px 0 var(--accent-purple); }
+        .tab svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+        .content-area {
+            display: none;
+            padding: 14px;
+            background-color: var(--bg-card);
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .content-area.expanded { display: flex; }
+        .panel { display: none; flex-direction: column; gap: 14px; }
+        .panel.active { display: flex; }
+
+        .lib-top-actions { display: flex; gap: 10px; }
+        .sub-btn {
+            background-color: var(--bg-button);
+            border: 1px solid var(--border-color);
+            color: var(--text-title);
+            padding: 9px 16px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .sub-btn:hover { background-color: var(--bg-button-hover); border-color: var(--border-color); }
+        .sub-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        .macro-list { display: flex; flex-direction: column; gap: 8px; }
+        .macro-item {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 9px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: 0.2s;
+        }
+        .macro-item:hover { border-color: var(--accent-purple); }
+        .macro-info { display: flex; flex-direction: column; gap: 3px; }
+        .macro-name { font-size: 13px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px; }
+        .macro-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--state-play); }
+        .macro-details { font-size: 11px; color: var(--text-muted); }
+        
+        .macro-actions { display: flex; align-items: center; gap: 8px; }
+        .load-btn { background: var(--accent-purple); color: white; border: none; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 0 10px var(--accent-glow); transition: background 0.3s, box-shadow 0.3s; }
+        .load-btn:hover { opacity: 0.9; }
+        .trash-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; }
+        .trash-btn:hover { color: var(--state-rec); }
+        .macro-count { text-align: center; font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; margin-top: auto; }
+
+        .clicker-stats { display: flex; justify-content: space-between; align-items: baseline; }
+        .big-number { font-size: 26px; font-weight: 800; color: var(--text-title); }
+        .big-number span { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-left: 4px; }
+        .right-cps { font-size: 14px; font-weight: 700; color: var(--accent-purple); transition: color 0.3s; }
+        .right-cps span { font-size: 10px; color: var(--text-muted); font-weight: 600; margin-left: 4px; text-transform: uppercase; }
+
+        .slider-container { display: flex; flex-direction: column; gap: 10px; }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-input);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--accent-glow);
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+
+        .preset-row { display: flex; gap: 8px; }
+        .preset-btn { flex: 1; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-muted); padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .preset-btn:hover { border-color: var(--accent-purple); color: var(--text-title); }
+
+        .option-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 7px 12px; border-radius: 10px; border: 1px solid var(--border-color); }
+        .option-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+        .button-group { display: flex; gap: 6px; }
+        .opt-pill { background: var(--bg-button); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .opt-pill.active { background: var(--accent-purple); color: white; border-color: var(--accent-purple); box-shadow: 0 0 10px var(--accent-glow); }
+
+        .clicker-container-box { display: flex; flex-direction: column; gap: 7px; }
+        .webhook-container-box { display: flex; flex-direction: column; gap: 7px; }
+        .settings-container-box { display: flex; flex-direction: column; gap: 7px; }
+        
+        .input-group { position: relative; display: flex; align-items: center; }
+        .input-group svg { position: absolute; left: 12px; width: 14px; height: 14px; stroke: var(--text-muted); fill: none; stroke-width: 2; }
+        .custom-input { width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 10px 8px 32px; color: var(--text-title); font-size: 12px; outline: none; transition: 0.2s; }
+        .custom-input:focus { border-color: var(--accent-purple); }
+
+        .screenshot-config-box { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+        .screenshot-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: var(--text-title); }
+        .screenshot-mode-row { display: flex; gap: 6px; }
+        .mode-btn { flex: 1; background: var(--bg-button); border: 1px solid var(--border-color); color: var(--text-muted); padding: 5px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; transition: 0.2s; }
+        .mode-btn.active { background: var(--accent-purple); color: white; border-color: var(--accent-purple); box-shadow: 0 0 8px var(--accent-glow); }
+        
+        .selector-view { display: none; flex-direction: column; gap: 6px; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--border-color); }
+        .selector-view.active { display: flex; }
+        
+        .app-select-dropdown { width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-title); padding: 8px; border-radius: 8px; font-size: 11px; outline: none; cursor: pointer; }
+
+        .launch-screen-box-btn {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+        }
+        .launch-screen-box-btn:hover { background: rgba(239, 68, 68, 0.25); }
+
+        .box-live-readout {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-family: monospace;
+            margin-top: 2px;
+        }
+
+        .screen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 99999;
+            display: none;
+            cursor: crosshair;
+        }
+        .screen-overlay.active { display: block; }
+
+        .coord-picker-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(90, 87, 245, 0.1);
+            z-index: 99999;
+            display: none;
+            cursor: crosshair;
+        }
+        .coord-picker-overlay.active { display: block; }
+
+        .coord-picker-banner {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--accent-purple);
+            padding: 10px 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+        .coord-picker-banner span { font-size: 12px; font-weight: 700; color: var(--text-title); }
+
+        .onscreen-red-box {
+            position: absolute;
+            top: 100px;
+            left: 150px;
+            width: 300px;
+            height: 200px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 3px solid #ef4444;
+            border-radius: 8px;
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .onscreen-red-box::before {
+            content: "DRAG & RESIZE ANYWHERE";
+            font-size: 11px;
+            font-weight: 800;
+            color: #ffffff;
+            background: rgba(239, 68, 68, 0.8);
+            padding: 4px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .onscreen-handle {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #ffffff;
+            border: 3px solid #ef4444;
+            border-radius: 50%;
+        }
+        .onscreen-handle.se { bottom: -7px; right: -7px; cursor: se-resize; }
+
+        .overlay-controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            cursor: default;
+            z-index: 100000;
+        }
+        .overlay-controls span { font-size: 12px; font-weight: 700; color: var(--text-title); font-family: monospace; }
+        .overlay-btn { background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .overlay-btn.cancel { background: var(--bg-button); color: var(--text-muted); border: 1px solid var(--border-color); }
+
+        .template-box { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; }
+        .template-text { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+        
+        .pill-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+        .var-pill { background: var(--bg-button); border: 1px solid var(--border-color); color: var(--icon-color); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .var-pill:hover { background: var(--accent-purple); color: white; border-color: var(--accent-purple); }
+
+        .action-submit-btn { width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-title); padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .action-submit-btn:hover { background: var(--bg-button-hover); border-color: var(--accent-purple); }
+
+        .settings-sub-tabs { display: flex; gap: 6px; margin-bottom: 2px; }
+        .settings-sub-tab { flex: 1; background: var(--bg-button); border: 1px solid var(--border-color); color: var(--text-muted); padding: 8px 6px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; text-align: center; transition: 0.2s; }
+        .settings-sub-tab:hover { color: var(--text-title); background: var(--bg-button-hover); }
+        .settings-sub-tab.active { background: var(--accent-purple); color: white; border-color: var(--accent-purple); box-shadow: 0 0 8px var(--accent-glow); }
+        
+        .settings-sub-pane { display: none; flex-direction: column; gap: 8px; }
+        .settings-sub-pane.active { display: flex; }
+
+        .settings-card { background: var(--bg-input); border: 1px solid var(--border-color); padding: 9px 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; }
+        .settings-card span { display: flex; align-items: center; gap: 8px; color: var(--text-title); }
+        .settings-card svg { width: 14px; height: 14px; stroke: var(--icon-color); fill: none; stroke-width: 2; }
+
+        .keybind-card { background: var(--bg-input); border: 1px solid var(--border-color); padding: 9px 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); font-weight: 600; }
+        .keybind-box { background: var(--bg-button); border: 1px solid var(--border-color); color: var(--icon-color); padding: 5px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; min-width: 90px; text-align: center; }
+        .keybind-box:hover { border-color: var(--accent-purple); color: var(--text-title); background: var(--bg-button-hover); }
+        .keybind-box.listening { border-color: var(--state-rec); color: var(--state-rec); background: rgba(239, 68, 68, 0.1); animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-button); border: 1px solid var(--border-color); transition: .2s; border-radius: 18px; }
+        .slider-switch:before { position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px; background-color: var(--text-muted); transition: .2s; border-radius: 50%; }
+        input:checked + .slider-switch { background-color: var(--accent-purple); border-color: var(--accent-purple); }
+        input:checked + .slider-switch:before { transform: translateX(16px); background-color: white; }
+
+        .color-swatch-row { display: flex; gap: 6px; }
+        .color-dot { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid var(--border-color); transition: transform 0.2s; }
+        .color-dot:hover { transform: scale(1.15); }
+        .color-dot.purple { background-color: #5a57f5; }
+        .color-dot.emerald { background-color: #10b981; }
+        .color-dot.cyan { background-color: #06b6d4; }
+        .color-dot.amber { background-color: #f59e0b; }
+        .color-dot.rose { background-color: #f43f5e; }
+        /* Settings that actually change appearance now, instead of just persisting */
+        body.no-animations, body.no-animations * {
+            transition: none !important;
+            animation: none !important;
+        }
+        body.compact-ui .header { padding: 10px 16px; }
+        body.compact-ui .panel { gap: 8px; }
+        body.compact-ui .settings-card,
+        body.compact-ui .macro-item,
+        body.compact-ui .keybind-card,
+        body.compact-ui .option-row {
+            padding: 8px 10px !important;
+        }
+        body.high-contrast { --border-color: rgba(255, 255, 255, 0.35); }
+        body.high-contrast.light-mode { --border-color: rgba(0, 0, 0, 0.35); }
+        body.high-contrast .settings-card,
+        body.high-contrast .macro-item,
+        body.high-contrast .keybind-card,
+        body.high-contrast .custom-input,
+        body.high-contrast .widget-container {
+            border: 1px solid var(--border-color) !important;
+        }
+        /* Toast notifications -- replaces blocking alert() popups for routine feedback */
+        #toast-container {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            right: 14px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .toast {
+            background: #12141f;
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--accent-purple);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.4;
+            color: var(--text-title);
+            box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+            animation: toast-in 0.2s ease;
+            pointer-events: auto;
+        }
+        .toast.success { border-left-color: #10b981; }
+        .toast.error { border-left-color: #ef4444; }
+        .toast.fade-out { animation: toast-out 0.2s ease forwards; }
+        @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-6px); } }
+    </style>
+</head>
+<body>
+
+    <div class="widget-container" id="widget">
+        <div id="toast-container"></div>
+
+        <div id="name-modal-overlay" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.55); z-index:10000; align-items:center; justify-content:center;">
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:18px; width:calc(100% - 60px); max-width:320px; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+                <div style="font-size:13px; font-weight:700; color:var(--text-title); margin-bottom:10px;">Name this macro</div>
+                <input type="text" id="name-modal-input" class="custom-input" style="width:100%; margin-bottom:12px; padding-left:12px;">
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button id="name-modal-cancel" class="sub-btn" style="justify-content:center;">Cancel</button>
+                    <button id="name-modal-save" class="sub-btn" style="justify-content:center; background:var(--accent-purple); border-color:var(--accent-purple); color:white;">Save</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Header -->
+        <div class="header">
+            <div class="brand-area">
+                <div class="logo-circle" id="appLogoCircle">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                </div>
+                <div class="title">ZenTask</div>
+                <div id="engine-status-dot" onclick="showEngineStatus()" title="Automation engine status -- click for details" style="width:8px;height:8px;border-radius:50%;background:#888;margin-left:8px;cursor:pointer;flex-shrink:0;"></div>
+            </div>
+            <div class="window-controls">
+                <div class="win-circle yellow" onclick="minimizeWindow()"></div>
+                <div class="win-circle red" onclick="closeWindow()"></div>
+            </div>
+        </div>
+
+        <!-- Toolbar Buttons -->
+        <div class="toolbar">
+            <div class="tool-btn" onclick="triggerTopAction('open')">
+                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <span>OPEN</span>
+            </div>
+            <div class="tool-btn" onclick="triggerTopAction('save')">
+                <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                <span>SAVE</span>
+            </div>
+            <div class="tool-btn" id="btn-rec" onclick="toggleRecordState()">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle></svg>
+                <span id="text-rec">REC</span>
+            </div>
+            <div class="tool-btn" id="btn-play" onclick="togglePlayState()">
+                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span id="text-play">PLAY</span>
+            </div>
+            <div class="tool-btn" id="btn-top-clicker" onclick="toggleAutoClickerState()">
+                <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                <span id="text-top-clicker">CLICKER</span>
+            </div>
+            <div class="tool-btn" id="btn-top-settings" onclick="togglePanel('settings')">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 2c-.6 0-1 .4-1 1v1.1c-.7.2-1.4.6-2 1l-.8-.8c-.4-.4-1-.4-1.4 0l-1.4 1.4c-.4.4-.4 1 0 1.4l.8.8c-.4.6-.8 1.3-1 2H3c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h1.1c.2.7.6 1.4 1 2l-.8.8c-.4.4-.4 1 0 1.4l1.4 1.4c.4.4 1 .4 1.4 0l.8-.8c.6.4 1.3.8 2 1V21c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-1.1c.7-.2 1.4-.6 2-1l.8.8c-.4.4 1 .4 1.4 0l1.4-1.4c.4-.4.4-1 0-1.4l-.8-.8c-.4-.6.8-1.3 1-2H21c.6 0 1-.4 1-1v-2c0-.6-.4-1-1-1h-1.1c-.2-.7-.6-1.4-1-2l.8.8c-.4.4.4-1 0-1.4l-1.4-1.4c-.4-.4-1-.4-1.4 0l-.8.8c-.6-.4-1.3-.8-2-1V3c0-.6-.4-1-1-1h-2z"/>
+                </svg>
+                <span>SETTINGS</span>
+            </div>
+        </div>
+
+        <!-- Navigation Sub-Tabs -->
+        <div class="tabs-row">
+            <div class="tab" id="tab-library" onclick="togglePanel('library')">
+                <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                Library
+            </div>
+            <div class="tab" id="tab-clicker" onclick="togglePanel('clicker')">
+                <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="7"></rect><line x1="12" y1="6" x2="12" y2="10"></line></svg>
+                Clicker Config
+            </div>
+            <div class="tab" id="tab-webhook" onclick="togglePanel('webhook')">
+                <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                Webhook
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area" id="content-area">
+            
+            <!-- 1. LIBRARY PANEL -->
+            <div class="panel" id="panel-library">
+                <div class="lib-top-actions">
+                    <button class="sub-btn" onclick="saveCurrentMacro()"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline></svg> Save current</button>
+                    <button class="sub-btn" onclick="importMacroFile()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Import file</button>
+                </div>
+                <div class="macro-list" id="macro-list"></div>
+                <div class="macro-count" id="macro-count">0 macros</div>
+            </div>
+
+            <!-- 2. CLICKER CONFIG PANEL -->
+            <div class="panel" id="panel-clicker">
+                <div class="clicker-container-box">
+                    <div class="clicker-stats">
+                        <div class="big-number"><span id="val-ms">100</span><span>ms</span></div>
+                        <div class="right-cps"><span id="val-cps">10</span><span>clicks/sec</span></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" id="clicker-slider" min="10" max="1000" value="100" oninput="updateClickerSpeed(this.value)">
+                    </div>
+                    <div class="preset-row">
+                        <button class="preset-btn" onclick="setClickerMs(500)">Slow</button>
+                        <button class="preset-btn" onclick="setClickerMs(100)">Normal</button>
+                        <button class="preset-btn" onclick="setClickerMs(30)">Fast</button>
+                        <button class="preset-btn" onclick="setClickerMs(10)">Turbo</button>
+                    </div>
+                    <div class="option-row">
+                        <span class="option-label">Button</span>
+                        <div class="button-group" id="group-button">
+                            <div class="opt-pill active" onclick="selectPill(this)">L</div>
+                            <div class="opt-pill" onclick="selectPill(this)">R</div>
+                            <div class="opt-pill" onclick="selectPill(this)">M</div>
+                        </div>
+                    </div>
+                    <div class="option-row">
+                        <span class="option-label">Click Type</span>
+                        <div class="button-group" id="group-clicktype">
+                            <div class="opt-pill active" onclick="selectPill(this)">Single</div>
+                            <div class="opt-pill" onclick="selectPill(this)">Double</div>
+                        </div>
+                    </div>
+                    <div class="option-row">
+                        <span class="option-label">Activation Mode</span>
+                        <div class="button-group" id="group-activation">
+                            <div class="opt-pill" onclick="selectPill(this)">Hold</div>
+                            <div class="opt-pill active" onclick="selectPill(this)">Toggle</div>
+                        </div>
+                    </div>
+                    <div class="option-row">
+                        <span class="option-label">Cursor Location</span>
+                        <div class="button-group">
+                            <div class="opt-pill active" id="pill-cursor-current" onclick="setCursorLocationMode('current')">Current</div>
+                            <div class="opt-pill" id="pill-cursor-fixed" onclick="setCursorLocationMode('fixed')">Fixed X/Y</div>
+                        </div>
+                    </div>
+                    <div class="option-row" id="fixed-coords-container" style="display: none; flex-direction: column; gap: 8px; align-items: stretch;">
+                        <button class="sub-btn" onclick="pickFixedPosition()" style="width: 100%; justify-content: center; background: rgba(90, 87, 245, 0.15); border-color: var(--accent-purple); color: var(--text-title);">
+                            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                            📍 Click Anywhere to Pick Position
+                        </button>
+                        <div style="display: flex; gap: 8px;">
+                            <div class="input-group" style="flex: 1;">
+                                <span style="position: absolute; left: 10px; top: 10px; font-size: 11px; color: var(--text-muted); font-weight: 700;">X:</span>
+                                <input type="number" id="fixed-x-val" class="custom-input" style="padding-left: 28px;" value="500">
+                            </div>
+                            <div class="input-group" style="flex: 1;">
+                                <span style="position: absolute; left: 10px; top: 10px; font-size: 11px; color: var(--text-muted); font-weight: 700;">Y:</span>
+                                <input type="number" id="fixed-y-val" class="custom-input" style="padding-left: 28px;" value="300">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. WEBHOOK PANEL -->
+            <div class="panel" id="panel-webhook">
+                <div class="webhook-container-box">
+                    <div class="screenshot-config-box">
+                        <div class="screenshot-header">
+                            <span>📸 Screenshot Region</span>
+                            <span style="font-size:10px; color:var(--state-play);" id="selectedModeBadge">ON-SCREEN BOX</span>
+                        </div>
+                        <div class="screenshot-mode-row">
+                            <button class="mode-btn" id="mode-app-btn" onclick="setScreenshotMode('app')">Choose App Window</button>
+                            <button class="mode-btn active" id="mode-box-btn" onclick="setScreenshotMode('box')">Visual On-Screen Box</button>
+                        </div>
+                        <div class="selector-view" id="view-app">
+                            <select class="app-select-dropdown" id="target-app-select" onchange="onAppSelectChange()">
+                                <option value="">Loading open windows...</option>
+                            </select>
+                        </div>
+                        <div class="selector-view active" id="view-box">
+                            <button class="launch-screen-box-btn" onclick="pickBoxRegion()">
+                                <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="12" cy="12" r="3"></circle></svg>
+                                Launch On-Screen Red Box
+                            </button>
+                            <div class="box-live-readout" id="boxReadout">Current Screen Area: X: 150 | Y: 100 | W: 300 | H: 200</div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                        <input type="text" id="webhook-url-input" class="custom-input" placeholder="Webhook URL (Discord/Slack)..." value="">
+                    </div>
+
+                    <div class="option-row">
+                        <span class="option-label">Trigger Condition</span>
+                        <div class="button-group" id="group-trigger">
+                            <div class="opt-pill active" onclick="selectPill(this)">Always</div>
+                            <div class="opt-pill" onclick="selectPill(this)">Success Only</div>
+                            <div class="opt-pill" onclick="selectPill(this)">Error Only</div>
+                        </div>
+                    </div>
+
+                    <div class="option-row">
+                        <span class="option-label">Embed Accent Color</span>
+                        <div class="button-group" id="group-embedcolor">
+                            <div class="opt-pill active" onclick="selectPill(this)">Auto</div>
+                            <div class="opt-pill" onclick="selectPill(this)">Green</div>
+                            <div class="opt-pill" onclick="selectPill(this)">Red</div>
+                            <div class="opt-pill" onclick="selectPill(this)">Blue</div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2  0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <input type="text" id="webhook-msg-input" class="custom-input" value='Macro "{name}" finished {event} at {time} | Box Area: {resolution}' placeholder="Message template...">
+                    </div>
+
+                    <div class="input-group">
+                        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <input type="text" id="webhook-mention-input" class="custom-input" placeholder="Mention Tag (e.g. @everyone or Role ID)..." value="">
+                    </div>
+
+                    <div class="template-box">
+                        <div class="template-text">Click utils below to instantly insert into message:</div>
+                        <div class="pill-grid">
+                            <span class="var-pill" onclick="insertWebhookVar('{name}')">{name}</span>
+                            <span class="var-pill" onclick="insertWebhookVar('{event}')">{event}</span>
+                            <span class="var-pill" onclick="insertWebhookVar('{time}')">{time}</span>
+                            <span class="var-pill" onclick="insertWebhookVar('{status}')">{status}</span>
+                            <span class="var-pill" onclick="insertWebhookVar('{resolution}')">{resolution}</span>
+                            <span class="var-pill" onclick="insertWebhookVar('{user}')">{user}</span>
+                        </div>
+                    </div>
+
+                    <button class="action-submit-btn" onclick="sendTestWebhook()">
+                        <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        Send Test Message
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4. SETTINGS PANEL -->
+            <div class="panel" id="panel-settings">
+                <div class="settings-container-box">
+                    <div class="settings-sub-tabs">
+                        <button class="settings-sub-tab active" onclick="switchSettingsTab('normal')">Normal</button>
+                        <button class="settings-sub-tab" onclick="switchSettingsTab('keybinds')">Keybinds</button>
+                        <button class="settings-sub-tab" onclick="switchSettingsTab('automation')">Automation</button>
+                        <button class="settings-sub-tab" onclick="switchSettingsTab('themes')">Themes</button>
+                    </div>
+
+                    <div class="settings-sub-pane active" id="pane-settings-normal">
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1z"></path></svg> Start with Windows Startup</span>
+                            <label class="switch"><input type="checkbox" id="setting-startup" onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg> Minimize to System Tray</span>
+                            <label class="switch"><input type="checkbox" id="setting-tray" checked onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg> Run Background Service</span>
+                            <label class="switch"><input type="checkbox" id="setting-background" onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Check Updates Automatically</span>
+                            <label class="switch"><input type="checkbox" id="setting-updates" checked onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line></svg> Hardware Acceleration Mode</span>
+                            <label class="switch"><input type="checkbox" id="setting-hwaccel" checked onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="settings-sub-pane" id="pane-settings-keybinds">
+                        <div class="keybind-card">Record Macro <span class="keybind-box" id="hotkey-record" onclick="startGlobalKeybindCapture(this)">F1</span></div>
+                        <div class="keybind-card">Play / Stop Macro <span class="keybind-box" id="hotkey-play" onclick="startGlobalKeybindCapture(this)">F2</span></div>
+                        <div class="keybind-card">Macro Pause <span class="keybind-box" id="hotkey-pause" onclick="startGlobalKeybindCapture(this)">F3</span></div>
+                        <div class="keybind-card">Toggle Auto-Clicker <span class="keybind-box" id="hotkey-clicker" onclick="startGlobalKeybindCapture(this)">F4</span></div>
+                    </div>
+
+                    <div class="settings-sub-pane" id="pane-settings-automation">
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline></svg> Auto-Save Recorded Macros to Library</span>
+                            <label class="switch"><input type="checkbox" id="setting-autosave" checked onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg> Smart Coordinate Locking</span>
+                            <label class="switch"><input type="checkbox" id="setting-coordlock" checked onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.73-5.73"></path></svg> Auto-Loop on Macro Error</span>
+                            <label class="switch"><input type="checkbox" id="setting-autoloop" onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Fast-Playback Safety Check</span>
+                            <label class="switch"><input type="checkbox" id="setting-safety" checked onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="settings-sub-pane" id="pane-settings-themes">
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v20M2 12h20"></path></svg> App Theme Color</span>
+                            <div class="color-swatch-row">
+                                <div class="color-dot purple" onclick="setAppColor('#5a57f5', 'rgba(90, 87, 245, 0.3)')" title="Purple Vibe"></div>
+                                <div class="color-dot emerald" onclick="setAppColor('#10b981', 'rgba(16, 185, 129, 0.3)')" title="Emerald Green"></div>
+                                <div class="color-dot cyan" onclick="setAppColor('#06b6d4', 'rgba(6, 182, 212, 0.3)')" title="Cyber Cyan"></div>
+                                <div class="color-dot amber" onclick="setAppColor('#f59e0b', 'rgba(245, 158, 11, 0.3)')" title="Amber Gold"></div>
+                                <div class="color-dot rose" onclick="setAppColor('#f43f5e', 'rgba(244, 63, 94, 0.3)')" title="Crimson Rose"></div>
+                            </div>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Light Mode Theme</span>
+                            <label class="switch"><input type="checkbox" id="theme-switch" onchange="toggleTheme(this); saveSettingsFromUI();"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg> Compact Widget UI</span>
+                            <label class="switch"><input type="checkbox" id="setting-compact" onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg> Smooth UI Animations</span>
+                            <label class="switch"><input type="checkbox" id="setting-animations" checked onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                        <div class="settings-card">
+                            <span><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10H12V2Z"></path></svg> High Contrast Borders</span>
+                            <label class="switch"><input type="checkbox" id="setting-contrast" onchange="saveSettingsFromUI()"><span class="slider-switch"></span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="screen-overlay" id="screenOverlay">
+        <div class="onscreen-red-box" id="onscreenRedBox">
+            <div class="onscreen-handle se" id="onscreenResizeHandle"></div>
+        </div>
+        <div class="overlay-controls" id="overlayControls">
+            <span id="overlayReadoutText">X: 150 | Y: 100 | W: 300 | H: 200</span>
+            <button class="overlay-btn" onclick="closeScreenOverlay(true)">Confirm Selection</button>
+            <button class="overlay-btn cancel" onclick="closeScreenOverlay(false)">Cancel</button>
+        </div>
+    </div>
+
+    <div class="coord-picker-overlay" id="coordPickerOverlay">
+        <div class="coord-picker-banner">
+            <span>🎯 Click anywhere on the screen to capture coordinates (Press ESC to cancel)</span>
+        </div>
+    </div>
+
+    <script>
+        // ---------------------------------------------------------------
+        // State
+        // ---------------------------------------------------------------
+        let currentActivePanel = null;
+        let cursorMode = 'current';
+        let macros = [];
+        let loadedMacroSteps = [];
+        let loadedMacroName = null;
+        let isRecording = false;
+        let isPlaying = false;
+        let isAutoClickerActive = false;
+        let settingsCache = {};
+        let currentCapturingEl = null;
+
+        // ---------------------------------------------------------------
+        // Toast notifications -- non-blocking feedback instead of alert()
+        // ---------------------------------------------------------------
+        function showToast(message, type) {
+            type = type || 'info';
+            const container = document.getElementById('toast-container');
+            if (!container) { console.log('[toast:' + type + ']', message); return; }
+            const el = document.createElement('div');
+            el.className = 'toast ' + type;
+            el.textContent = message;
+            container.appendChild(el);
+            const duration = type === 'error' ? 6000 : 3500;
+            setTimeout(() => {
+                el.classList.add('fade-out');
+                setTimeout(() => el.remove(), 220);
+            }, duration);
+        }
+
+        function promptForName(defaultValue) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('name-modal-overlay');
+                const input = document.getElementById('name-modal-input');
+                const saveBtn = document.getElementById('name-modal-save');
+                const cancelBtn = document.getElementById('name-modal-cancel');
+
+                input.value = defaultValue || '';
+                overlay.style.display = 'flex';
+                input.focus();
+                input.select();
+
+                const cleanup = (result) => {
+                    overlay.style.display = 'none';
+                    saveBtn.onclick = null;
+                    cancelBtn.onclick = null;
+                    input.onkeydown = null;
+                    resolve(result);
+                };
+
+                saveBtn.onclick = () => cleanup(input.value.trim() || null);
+                cancelBtn.onclick = () => cleanup(null);
+                input.onkeydown = (e) => {
+                    if (e.key === 'Enter') cleanup(input.value.trim() || null);
+                    else if (e.key === 'Escape') cleanup(null);
+                };
+            });
+        }
+
+        // ---------------------------------------------------------------
+        // Panel / tab switching (unchanged behavior)
+        // ---------------------------------------------------------------
+        function syncWindowSize() {
+            // Let the DOM settle after class/display changes, then measure the
+            // widget's true content size and resize the actual OS window to match.
+            // Uses scrollWidth/scrollHeight rather than getBoundingClientRect(),
+            // since the widget is capped at max-height:100vh -- measuring the
+            // rendered box would just report whatever size the window currently
+            // is, not the size the new content actually needs, and the window
+            // could never grow.
+            requestAnimationFrame(() => {
+                const widget = document.getElementById('widget');
+                if (!widget) return;
+                window.zentask.resizeWindow(widget.scrollWidth, widget.scrollHeight);
+            });
+        }
+
+        function togglePanel(panelName) {
+            const contentArea = document.getElementById('content-area');
+            const targetPanel = document.getElementById('panel-' + panelName);
+            const targetTab = document.getElementById('tab-' + panelName);
+            const topSettingsBtn = document.getElementById('btn-top-settings');
+
+            if (currentActivePanel === panelName) {
+                contentArea.classList.remove('expanded');
+                if (targetPanel) targetPanel.classList.remove('active');
+                if (targetTab) targetTab.classList.remove('active');
+                topSettingsBtn.classList.remove('active-tool');
+                currentActivePanel = null;
+                syncWindowSize();
+                return;
+            }
+
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            topSettingsBtn.classList.remove('active-tool');
+
+            contentArea.classList.add('expanded');
+            if (targetPanel) targetPanel.classList.add('active');
+            if (targetTab) targetTab.classList.add('active');
+
+            if (panelName === 'settings') {
+                topSettingsBtn.classList.add('active-tool');
+            }
+
+            currentActivePanel = panelName;
+
+            if (panelName === 'library') renderMacroList();
+            if (panelName === 'webhook') refreshAppWindowList();
+            syncWindowSize();
+        }
+
+        function switchSettingsTab(tabName) {
+            document.querySelectorAll('.settings-sub-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.settings-sub-pane').forEach(p => p.classList.remove('active'));
+
+            const targetPane = document.getElementById('pane-settings-' + tabName);
+            if (targetPane) targetPane.classList.add('active');
+
+            event.currentTarget.classList.add('active');
+            syncWindowSize();
+        }
+
+        // ---------------------------------------------------------------
+        // Window controls
+        // ---------------------------------------------------------------
+        function minimizeWindow() { window.zentask.minimize(); }
+        function closeWindow() { window.zentask.close(); }
+
+        // ---------------------------------------------------------------
+        // Theme
+        // ---------------------------------------------------------------
+        function toggleTheme(checkbox) {
+            document.body.classList.toggle('light-mode', checkbox.checked);
+        }
+
+        function hexToRgba(hex, alpha) {
+            const bigint = parseInt(hex.replace('#', ''), 16);
+            const r = (bigint >> 16) & 255, g = (bigint >> 8) & 255, b = bigint & 255;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function setAppColor(hexColor, glowColor, persist) {
+            if (persist === undefined) persist = true;
+            document.documentElement.style.setProperty('--accent-purple', hexColor);
+            document.documentElement.style.setProperty('--accent-glow', glowColor);
+            if (persist) {
+                settingsCache.themeColor = hexColor;
+                window.zentask.settingsSave(settingsCache);
+            }
+        }
+
+        function applyLiveUISettings() {
+            document.body.classList.toggle('compact-ui', !!settingsCache.compactUI);
+            document.body.classList.toggle('no-animations', settingsCache.animations === false);
+            document.body.classList.toggle('high-contrast', !!settingsCache.highContrast);
+        }
+
+        // ---------------------------------------------------------------
+        // Cursor location mode (clicker config panel)
+        // ---------------------------------------------------------------
+        function setCursorLocationMode(mode) {
+            cursorMode = mode;
+            const currentPill = document.getElementById('pill-cursor-current');
+            const fixedPill = document.getElementById('pill-cursor-fixed');
+            const coordsContainer = document.getElementById('fixed-coords-container');
+
+            if (mode === 'current') {
+                currentPill.classList.add('active');
+                fixedPill.classList.remove('active');
+                coordsContainer.style.display = 'none';
+            } else {
+                fixedPill.classList.add('active');
+                currentPill.classList.remove('active');
+                coordsContainer.style.display = 'flex';
+            }
+            pushClickerConfig();
+        }
+
+        async function pickFixedPosition() {
+            const result = await window.zentask.pickPoint();
+            if (!result) return;
+            document.getElementById('fixed-x-val').value = result.x;
+            document.getElementById('fixed-y-val').value = result.y;
+            pushClickerConfig();
+        }
+
+        // ---------------------------------------------------------------
+        // Screenshot region: box mode + app-window mode
+        // ---------------------------------------------------------------
+        function setScreenshotMode(mode) {
+            const appBtn = document.getElementById('mode-app-btn');
+            const boxBtn = document.getElementById('mode-box-btn');
+            const viewApp = document.getElementById('view-app');
+            const viewBox = document.getElementById('view-box');
+            const badge = document.getElementById('selectedModeBadge');
+
+            if (mode === 'app') {
+                appBtn.classList.add('active');
+                boxBtn.classList.remove('active');
+                viewApp.classList.add('active');
+                viewBox.classList.remove('active');
+                badge.innerText = "APP WINDOW";
+                refreshAppWindowList();
+            } else {
+                boxBtn.classList.add('active');
+                appBtn.classList.remove('active');
+                viewBox.classList.add('active');
+                viewApp.classList.remove('active');
+                badge.innerText = "ON-SCREEN BOX";
+            }
+        }
+
+        function pushRegion(text, bounds) {
+            const readout = document.getElementById('boxReadout');
+            if (readout) readout.innerText = `Current Screen Area: ${text}`;
+            const payload = { lastRegion: text };
+            if (bounds) payload.lastRegionBounds = bounds;
+            window.zentask.webhookSetConfig(payload);
+        }
+
+        async function pickBoxRegion() {
+            const result = await window.zentask.pickBox();
+            if (!result) return;
+            pushRegion(`X: ${result.x} | Y: ${result.y} | W: ${result.w} | H: ${result.h}`, { x: result.x, y: result.y, w: result.w, h: result.h });
+        }
+
+        async function refreshAppWindowList() {
+            const select = document.getElementById('target-app-select');
+            if (!select) return;
+            select.innerHTML = '<option value="">Loading open windows...</option>';
+            const wins = await window.zentask.listWindows();
+            select.innerHTML = '';
+            if (!wins || wins.length === 0) {
+                select.innerHTML = '<option value="">No windows detected — try the on-screen box instead</option>';
+                return;
+            }
+            wins.forEach((w, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = w.title;
+                opt.dataset.region = JSON.stringify(w);
+                select.appendChild(opt);
+            });
+            onAppSelectChange();
+        }
+
+        function onAppSelectChange() {
+            const select = document.getElementById('target-app-select');
+            const opt = select.selectedOptions[0];
+            if (!opt || !opt.dataset.region) return;
+            const w = JSON.parse(opt.dataset.region);
+            pushRegion(`X: ${w.x} | Y: ${w.y} | W: ${w.w} | H: ${w.h} (${w.title})`, { x: w.x, y: w.y, w: w.w, h: w.h });
+        }
+
+        // ---------------------------------------------------------------
+        // Webhook
+        // ---------------------------------------------------------------
+        function insertWebhookVar(variable) {
+            const inputField = document.getElementById('webhook-msg-input');
+            const startPos = inputField.selectionStart;
+            const endPos = inputField.selectionEnd;
+            const text = inputField.value;
+            inputField.value = text.substring(0, startPos) + variable + text.substring(endPos);
+            inputField.focus();
+            inputField.setSelectionRange(startPos + variable.length, startPos + variable.length);
+        }
+
+        async function pushWebhookConfigFromUI() {
+            const trigger = (document.querySelector('#group-trigger .opt-pill.active') || {}).innerText || 'Always';
+            const embedColor = (document.querySelector('#group-embedcolor .opt-pill.active') || {}).innerText || 'Auto';
+            await window.zentask.webhookSetConfig({
+                url: document.getElementById('webhook-url-input').value.trim(),
+                messageTemplate: document.getElementById('webhook-msg-input').value,
+                mentionTag: document.getElementById('webhook-mention-input').value,
+                triggerCondition: trigger === 'Success Only' ? 'success' : trigger === 'Error Only' ? 'error' : 'always',
+                embedColor: embedColor.toLowerCase()
+            });
+        }
+
+        async function sendTestWebhook() {
+            const url = document.getElementById('webhook-url-input').value.trim();
+            if (!url) { showToast('Add a webhook URL first (Discord or Slack incoming webhook link).', 'error'); return; }
+            await pushWebhookConfigFromUI();
+            const result = await window.zentask.webhookSendTest();
+            if (!result.success) { showToast('Webhook failed: ' + (result.error || 'unknown error'), 'error'); return; }
+            if (url.includes('discord.com/api/webhooks') && !result.screenshotAttached) {
+                showToast('Sent, but the screenshot did NOT attach — check F12 Console for "[screenshot]" errors.', 'error');
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Global hotkey capture (now driven by the real OS-wide listener)
+        // ---------------------------------------------------------------
+        window.zentask.onHotkeyLiveUpdate((combo) => {
+            if (currentCapturingEl) currentCapturingEl.innerText = combo.join(' + ');
+        });
+
+        async function startGlobalKeybindCapture(el) {
+            if (currentCapturingEl) currentCapturingEl.classList.remove('listening');
+            if (el.dataset.oldText === undefined) el.dataset.oldText = el.innerText;
+            currentCapturingEl = el;
+            el.innerText = "Press up to 3 keys simultaneously...";
+            el.classList.add('listening');
+
+            const combo = await window.zentask.hotkeyCaptureStart();
+            el.classList.remove('listening');
+            currentCapturingEl = null;
+
+            if (!combo || combo.length === 0) {
+                el.innerText = el.dataset.oldText;
+                return;
+            }
+            el.innerText = combo.join(' + ');
+            registerHotkeyForElement(el, combo);
+        }
+
+        function registerHotkeyForElement(el, combo) {
+            const fixedMap = {
+                'hotkey-record': 'toggle-record',
+                'hotkey-play': 'toggle-play',
+                'hotkey-pause': 'macro-pause',
+                'hotkey-clicker': 'toggle-clicker'
+            };
+            if (fixedMap[el.id]) {
+                window.zentask.hotkeyRegister(el.id, combo, fixedMap[el.id]);
+                return;
+            }
+            const item = el.closest('.macro-item');
+            if (item) {
+                const id = item.dataset.macroId;
+                const m = macros.find(x => x.id === id);
+                if (m) {
+                    m.hotkey = combo;
+                    window.zentask.macrosSave(macros);
+                    window.zentask.hotkeyRegister('macro-' + id, combo, 'macro:' + id);
+                }
+            }
+        }
+
+        async function handleHotkeyTriggered({ action, phase }) {
+            if (action === 'toggle-record' && phase === 'down') {
+                await toggleRecordState();
+            } else if (action === 'toggle-play' && phase === 'down') {
+                await togglePlayState();
+            } else if (action === 'macro-pause' && phase === 'down') {
+                await window.zentask.macroPause();
+            } else if (action === 'toggle-clicker') {
+                const activation = (document.querySelector('#group-activation .opt-pill.active') || {}).innerText || 'Toggle';
+                if (activation === 'Hold') {
+                    if (phase === 'down' && !isAutoClickerActive) {
+                        pushClickerConfig();
+                        const res = await window.zentask.clickerStart();
+                        if (res.success) { isAutoClickerActive = true; updateClickerUI(); }
+                    } else if (phase === 'up' && isAutoClickerActive) {
+                        await window.zentask.clickerStop();
+                        isAutoClickerActive = false;
+                        updateClickerUI();
+                    }
+                } else if (phase === 'down') {
+                    await toggleAutoClickerState();
+                }
+            } else if (action.indexOf('macro:') === 0 && phase === 'down') {
+                const id = action.slice(6);
+                const m = macros.find(x => x.id === id);
+                if (m) {
+                    loadedMacroSteps = m.steps;
+                    loadedMacroName = m.name;
+                    if (!isPlaying) await togglePlayState();
+                }
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // REC / PLAY / CLICKER toolbar buttons
+        // ---------------------------------------------------------------
+        async function toggleRecordState() {
+            const btn = document.getElementById('btn-rec');
+            const txt = document.getElementById('text-rec');
+            if (!isRecording) {
+                const res = await window.zentask.recordStart();
+                if (!res.success) { showToast('Recording needs the automation engine, which failed to load. Try reinstalling dependencies and rebuilding.', 'error'); return; }
+                isRecording = true;
+                btn.classList.add('is-recording');
+                txt.innerText = "REC...";
+                if (isPlaying) await togglePlayState();
+            } else {
+                const result = await window.zentask.recordStop();
+                isRecording = false;
+                btn.classList.remove('is-recording');
+                txt.innerText = "REC";
+                if (result.steps && result.steps.length > 0) {
+                    loadedMacroSteps = result.steps;
+                    loadedMacroName = 'Recording ' + new Date().toLocaleTimeString();
+                    if (settingsCache.autoSaveMacros !== false) {
+                        macros.push({ id: 'm' + Date.now(), name: loadedMacroName, steps: loadedMacroSteps, hotkey: null });
+                        await window.zentask.macrosSave(macros);
+                        renderMacroList();
+                    }
+                } else {
+                    showToast('Recording captured 0 steps — check F12 Console for [engine] errors.', 'error');
+                }
+            }
+        }
+
+        function updatePlayUI() {
+            const btn = document.getElementById('btn-play');
+            const txt = document.getElementById('text-play');
+            if (isPlaying) { btn.classList.add('is-playing'); txt.innerText = "RUN"; }
+            else { btn.classList.remove('is-playing'); txt.innerText = "PLAY"; }
+        }
+
+        async function togglePlayState() {
+            if (!isPlaying) {
+                if (!loadedMacroSteps || loadedMacroSteps.length === 0) { showToast('No macro loaded — record one with REC, or hit Load on a saved macro.', 'error'); return; }
+                isPlaying = true;
+                updatePlayUI();
+                if (isRecording) await toggleRecordState();
+                window.zentask.macroPlay(loadedMacroSteps, loadedMacroName).then((res) => {
+                    if (res && res.success === false) {
+                        isPlaying = false;
+                        updatePlayUI();
+                        if (res.reason === 'engine-unavailable') showToast('Playback needs the automation engine, which failed to load.', 'error');
+                    }
+                });
+            } else {
+                await window.zentask.macroStop();
+                isPlaying = false;
+                updatePlayUI();
+            }
+        }
+
+        function updateClickerUI() {
+            const btn = document.getElementById('btn-top-clicker');
+            const txt = document.getElementById('text-top-clicker');
+            if (isAutoClickerActive) { btn.classList.add('is-clicker-active'); txt.innerText = "ACTIVE"; }
+            else { btn.classList.remove('is-clicker-active'); txt.innerText = "CLICKER"; }
+        }
+
+        async function toggleAutoClickerState() {
+            if (!isAutoClickerActive) {
+                pushClickerConfig();
+                const res = await window.zentask.clickerStart();
+                if (!res.success) { showToast('Auto-clicker needs the automation engine, which failed to load. Try reinstalling dependencies.', 'error'); return; }
+                isAutoClickerActive = true;
+            } else {
+                await window.zentask.clickerStop();
+                isAutoClickerActive = false;
+            }
+            updateClickerUI();
+        }
+
+        function triggerTopAction(action) {
+            if (action === 'save') saveCurrentMacro();
+            else if (action === 'open') importMacroFile();
+        }
+
+        // ---------------------------------------------------------------
+        // Clicker config panel
+        // ---------------------------------------------------------------
+        function updateClickerSpeed(msValue) {
+            document.getElementById('val-ms').innerText = msValue;
+            let cps = (1000 / msValue).toFixed(1);
+            if (cps > 99) cps = Math.round(cps);
+            document.getElementById('val-cps').innerText = cps;
+            pushClickerConfig();
+        }
+
+        function setClickerMs(ms) {
+            document.getElementById('clicker-slider').value = ms;
+            updateClickerSpeed(ms);
+        }
+
+        function selectPill(element) {
+            element.parentElement.querySelectorAll('.opt-pill').forEach(p => p.classList.remove('active'));
+            element.classList.add('active');
+            const groupId = element.parentElement.id;
+            if (groupId === 'group-button' || groupId === 'group-clicktype' || groupId === 'group-activation') {
+                pushClickerConfig();
+            }
+        }
+
+        function pushClickerConfig() {
+            const button = (document.querySelector('#group-button .opt-pill.active') || {}).innerText || 'L';
+            const clickType = (document.querySelector('#group-clicktype .opt-pill.active') || {}).innerText || 'Single';
+            const activation = (document.querySelector('#group-activation .opt-pill.active') || {}).innerText || 'Toggle';
+            window.zentask.clickerSetConfig({
+                intervalMs: Number(document.getElementById('clicker-slider').value) || 100,
+                button: button === 'R' ? 'right' : button === 'M' ? 'middle' : 'left',
+                clickType: clickType === 'Double' ? 'double' : 'single',
+                activation: activation === 'Toggle' ? 'toggle' : 'hold',
+                cursorMode: cursorMode,
+                fixedX: Number(document.getElementById('fixed-x-val').value) || 0,
+                fixedY: Number(document.getElementById('fixed-y-val').value) || 0
+            });
+        }
+
+        // ---------------------------------------------------------------
+        // Macro library
+        // ---------------------------------------------------------------
+        function escapeHtml(s) {
+            const d = document.createElement('div');
+            d.innerText = s;
+            return d.innerHTML;
+        }
+
+        function renderMacroList() {
+            const list = document.getElementById('macro-list');
+            const count = document.getElementById('macro-count');
+            if (!list) return;
+            list.innerHTML = '';
+            macros.forEach(m => {
+                const steps = m.steps ? m.steps.length : 0;
+                const durationMs = steps > 0 ? m.steps[m.steps.length - 1].t : 0;
+                const div = document.createElement('div');
+                div.className = 'macro-item';
+                div.dataset.macroId = m.id;
+                div.innerHTML = `
+                    <div class="macro-info">
+                        <div class="macro-name"><div class="macro-dot"></div> ${escapeHtml(m.name)}</div>
+                        <div class="macro-details">${steps} steps &bull; ${(durationMs / 1000).toFixed(1)}s</div>
+                    </div>
+                    <div class="macro-actions">
+                        <span class="keybind-box" onclick="startGlobalKeybindCapture(this)">${m.hotkey ? m.hotkey.join('+') : 'SET'}</span>
+                        <button class="load-btn" onclick="loadMacro(this)">Load</button>
+                        <button class="trash-btn" onclick="deleteMacro(this)">&#128465;</button>
+                    </div>`;
+                list.appendChild(div);
+                if (m.hotkey) window.zentask.hotkeyRegister('macro-' + m.id, m.hotkey, 'macro:' + m.id);
+            });
+            count.innerText = macros.length + (macros.length === 1 ? ' macro' : ' macros');
+        }
+
+        function loadMacro(btn) {
+            const item = btn.closest('.macro-item');
+            const m = macros.find(x => x.id === item.dataset.macroId);
+            if (!m) return;
+            loadedMacroSteps = m.steps;
+            loadedMacroName = m.name;
+        }
+
+        async function deleteMacro(btn) {
+            const item = btn.closest('.macro-item');
+            const id = item.dataset.macroId;
+            macros = macros.filter(x => x.id !== id);
+            window.zentask.hotkeyUnregister('macro-' + id);
+            await window.zentask.macrosSave(macros);
+            renderMacroList();
+        }
+
+        async function saveCurrentMacro() {
+            if (!loadedMacroSteps || loadedMacroSteps.length === 0) { showToast('Nothing to save yet — record a macro first (hit REC).', 'error'); return; }
+            const name = await promptForName(loadedMacroName || 'New Macro');
+            if (!name) return;
+            macros.push({ id: 'm' + Date.now(), name, steps: loadedMacroSteps, hotkey: null });
+            await window.zentask.macrosSave(macros);
+            renderMacroList();
+        }
+
+        async function importMacroFile() {
+            const result = await window.zentask.macrosImport();
+            if (!result) return;
+            if (result.error) { showToast('Could not read that file: ' + result.error, 'error'); return; }
+            const name = result.name || 'Imported Macro';
+            const steps = result.steps || result;
+            macros.push({ id: 'm' + Date.now(), name, steps, hotkey: null });
+            await window.zentask.macrosSave(macros);
+            renderMacroList();
+        }
+
+        // ---------------------------------------------------------------
+        // Settings
+        // ---------------------------------------------------------------
+        async function loadSettingsIntoUI() {
+            settingsCache = await window.zentask.settingsLoad();
+            document.getElementById('setting-startup').checked = !!settingsCache.runAtStartup;
+            document.getElementById('setting-tray').checked = settingsCache.minimizeToTray !== false;
+            document.getElementById('setting-background').checked = !!settingsCache.runInBackground;
+            document.getElementById('setting-updates').checked = settingsCache.checkUpdates !== false;
+            document.getElementById('setting-hwaccel').checked = settingsCache.hardwareAccel !== false;
+            document.getElementById('setting-autosave').checked = settingsCache.autoSaveMacros !== false;
+            document.getElementById('setting-coordlock').checked = settingsCache.smartCoordLocking !== false;
+            document.getElementById('setting-autoloop').checked = !!settingsCache.autoLoopOnError;
+            document.getElementById('setting-safety').checked = settingsCache.fastPlaybackSafety !== false;
+            document.getElementById('setting-compact').checked = !!settingsCache.compactUI;
+            document.getElementById('setting-animations').checked = settingsCache.animations !== false;
+            document.getElementById('setting-contrast').checked = !!settingsCache.highContrast;
+            document.getElementById('theme-switch').checked = !!settingsCache.lightMode;
+            if (settingsCache.lightMode) document.body.classList.add('light-mode');
+            if (settingsCache.themeColor) setAppColor(settingsCache.themeColor, hexToRgba(settingsCache.themeColor, 0.3), false);
+            applyLiveUISettings();
+        }
+
+        function saveSettingsFromUI() {
+            settingsCache = {
+                ...settingsCache,
+                runAtStartup: document.getElementById('setting-startup').checked,
+                minimizeToTray: document.getElementById('setting-tray').checked,
+                runInBackground: document.getElementById('setting-background').checked,
+                checkUpdates: document.getElementById('setting-updates').checked,
+                hardwareAccel: document.getElementById('setting-hwaccel').checked,
+                autoSaveMacros: document.getElementById('setting-autosave').checked,
+                smartCoordLocking: document.getElementById('setting-coordlock').checked,
+                autoLoopOnError: document.getElementById('setting-autoloop').checked,
+                fastPlaybackSafety: document.getElementById('setting-safety').checked,
+                compactUI: document.getElementById('setting-compact').checked,
+                animations: document.getElementById('setting-animations').checked,
+                highContrast: document.getElementById('setting-contrast').checked,
+                lightMode: document.getElementById('theme-switch').checked
+            };
+            window.zentask.settingsSave(settingsCache);
+            applyLiveUISettings();
+        }
+
+        // ---------------------------------------------------------------
+        // Init
+        // ---------------------------------------------------------------
+        async function init() {
+            let lastEngineStatus = null;
+            window.zentask.onEngineStatus(({ uiohookReady, simReady }) => {
+                lastEngineStatus = { uiohookReady, simReady };
+                const dot = document.getElementById('engine-status-dot');
+                if (dot) dot.style.background = (uiohookReady && simReady) ? '#10b981' : '#ef4444';
+                if (!uiohookReady || !simReady) {
+                    const missing = [!uiohookReady && 'recording/hotkeys', !simReady && 'click/type simulation'].filter(Boolean).join(' and ');
+                    showToast(missing + ' failed to start — click the dot next to the title for details.', 'error');
+                }
+            });
+            window.showEngineStatus = function() {
+                if (!lastEngineStatus) { showToast('Engine status not received yet — still starting up.', 'info'); return; }
+                const { uiohookReady, simReady } = lastEngineStatus;
+                if (uiohookReady && simReady) {
+                    showToast('Automation engine OK — recording/hotkeys and click/type simulation both running.', 'success');
+                } else {
+                    const missing = [!uiohookReady && 'uiohook-napi (recording/hotkeys)', !simReady && 'the click/type simulation helper'].filter(Boolean).join(' and ');
+                    showToast(missing + ' failed to start — check F12 Console for "[engine]"/"[simulator]" errors.', 'error');
+                }
+            };
+            window.zentask.onEngineNotice(({ context, message }) => {
+                showToast(message, 'error');
+            });
+            window.zentask.onHotkeyTriggered(handleHotkeyTriggered);
+            window.zentask.onPlaybackFinished((data) => {
+                isPlaying = false;
+                updatePlayUI();
+                if (data && data.success === false && data.error) {
+                    showToast('Playback stopped with an error: ' + data.error, 'error');
+                }
+            });
+
+            await loadSettingsIntoUI();
+            macros = await window.zentask.macrosLoad();
+            renderMacroList();
+            pushClickerConfig();
+
+            const defaults = [
+                ['hotkey-record', ['F1'], 'toggle-record'],
+                ['hotkey-play', ['F2'], 'toggle-play'],
+                ['hotkey-pause', ['F3'], 'macro-pause'],
+                ['hotkey-clicker', ['F4'], 'toggle-clicker']
+            ];
+            defaults.forEach(([id, keys, action]) => window.zentask.hotkeyRegister(id, keys, action));
+            syncWindowSize();
+        }
+        document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
