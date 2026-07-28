@@ -1,6 +1,6 @@
 @echo off
 echo ===============================================
-echo   ZenTask Pro Utility - Building .exe
+echo   ZenTask - Building .exe
 echo ===============================================
 echo.
 
@@ -12,16 +12,16 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo Installing dependencies (first run only, this can take a few minutes
-echo since two of them - uiohook-napi and nut-js - include native modules
-echo that get rebuilt for Electron automatically via electron-builder)...
+echo Installing dependencies (first run only, this can take a minute
+echo since uiohook-napi includes a native module that gets rebuilt
+echo for Electron automatically via electron-builder)...
 call npm install
 if %errorlevel% neq 0 (
     echo.
     echo ===============================================
     echo   npm install failed.
-    echo   Most common cause: the native modules ^(uiohook-napi /
-    echo   nut-js^) need build tools. Try:
+    echo   Most common cause: the native module ^(uiohook-napi^)
+    echo   needs build tools. Try:
     echo     npm install --global windows-build-tools
     echo   or install "Desktop development with C++" via the
     echo   Visual Studio Build Tools installer, then re-run this file.
@@ -36,7 +36,12 @@ call npm run dist
 
 echo.
 echo ===============================================
-echo   Done! Your .exe is in the "dist" folder.
+echo   Done! dist\ZenTask.exe is your app.
+echo.
+echo   That ONE file is everything. To share ZenTask with
+echo   someone else, just send them dist\ZenTask.exe -- they
+echo   don't need Node.js, npm, or anything else. They just
+echo   double-click it and it runs.
 echo.
 echo   Note: Windows Defender / your antivirus may flag it on
 echo   first run since it's an unsigned auto-clicker/macro tool -
